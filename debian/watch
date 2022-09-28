@@ -1,0 +1,5 @@
+# run "uscan --report" to check or "gpb import-orig --uscan" to update
+version = 4
+opts="filenamemangle=s%(?:.*?)?v?(\d[\d.]*)\.tar\.gz%editorconfig-core-c-$1.tar.gz%" \
+ https://github.com/editorconfig/editorconfig-core-c/tags \
+ (?:.*?/)?v?(\d[\d.]*)\.tar\.gz

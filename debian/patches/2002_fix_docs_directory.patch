@@ -1,0 +1,19 @@
+Description: Fix the directory name where docs are installed
+ Upstream installs docs to usr/share/doc/editorconfig but in Debian
+ we ship these docs as part of editorconfig-doc package. This patch
+ changes the directory name from editorconfig to editorconfig-doc.
+Author: Vasudev Kamath <kamathvasudev@gmail.com>
+Forwarded: not-needed
+Last-Update: 2016-03-25
+
+--- a/doc/CMakeLists.txt
++++ b/doc/CMakeLists.txt
+@@ -125,7 +125,7 @@
+ 
+         if(INSTALL_HTML_DOC)
+             install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html"
+-                DESTINATION share/doc/editorconfig)
++                DESTINATION share/doc/editorconfig-doc)
+         endif(INSTALL_HTML_DOC)
+ 
+     else(DOXYGEN_FOUND)

@@ -1,0 +1,90 @@
+#!/usr/bin/make -f
+# -*- mode: makefile; coding: utf-8 -*-
+# Copyright © 2013 Vasudev Kamath <kamathvasudev@gmail.com>
+# Copyright © 2013, 2015-2016 Jonas Smedegaard <dr@jones.dk>
+# Description: Main Debian packaging script for EditorConfig core
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# This needs to declared/run before including CDBS snippets
+stem = editorconfig
+major := $(shell perl -ne '/^set .editorconfig_VERSION_MAJOR +(\d+)/ and print $$1' CMakeLists.txt)
+pkg-lib = $(lib)$(major)
+debian/control:: debian/control.in
+DEB_PHONY_RULES += debian/control.in
+debian/control.in::
+	sed -e 's/__LIBPKGNAME__/$(pkg-lib)/g' \
+		< debian/control.in.in \
+		> debian/control.in
+
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/rules/utils.mk
+include /usr/share/cdbs/1/class/cmake.mk
+
+lib = lib$(stem)
+pkg-dev = $(lib)-dev
+pkg-bin = $(stem)
+pkg-doc = $(stem)-doc
+
+# Build-depend unversioned on debhelper
+#  TODO: Drop when adopted in cdbs
+CDBS_BUILD_DEPENDS_rules_debhelper_v9 = debhelper
+
+# Build Depends
+CDBS_BUILD_DEPENDS += , cmake, doxygen, libpcre3-dev
+
+# enable installation of HTML docs
+DEB_CMAKE_NORMAL_ARGS += -DINSTALL_HTML_DOC=ON
+
+# Multiarch quirks (should ideally be resolved automagically)
+CDBS_BUILD_DEPENDS_rules_debhelper_buildinfo =
+CDBS_BUILD_DEPENDS_rules_buildcore_pkgrel =
+
+# avoid compressing documentation
+DEB_COMPRESS_EXCLUDE_DEFAULT += .html
+
+# install editorconfig binaries, man pages and docs
+DEB_DH_INSTALL_ARGS_$(pkg-bin) = usr/bin
+DEB_INSTALL_MANPAGES_$(pkg-bin) = \
+	debian/tmp/usr/share/man/man1/editorconfig.1 \
+	debian/tmp/usr/share/man/man5/editorconfig-format.5
+DEB_INSTALL_MANPAGES_$(pkg-dev) = debian/tmp/usr/share/man/man3/*.3
+DEB_DH_LINK_$(pkg-bin) = /usr/share/man/man1/editorconfig.1.gz \
+	/usr/share/man/man1/editorconfig-$(DEB_UPSTREAM_VERSION).1.gz
+DEB_DH_INSTALL_ARGS_$(pkg-doc) = usr/share/doc/editorconfig-doc/html/
+
+# Let d-shlibs calculate development package dependencies
+#  and handle shared library install
+#  * d-shlibs 0.48 required for --multiarch and --exclude-la options
+CDBS_BUILD_DEPENDS += , d-shlibs (>= 0.48)
+binary-post-install/$(pkg-lib) binary-post-install/$(pkg-dev):: \
+ debian/stamp-local-shlibs-$(lib)
+debian/stamp-local-shlibs-$(lib): \
+ binary-install/$(pkg-lib) binary-install/$(pkg-dev)
+	d-shlibmove --commit \
+		--devunversioned \
+		--multiarch \
+		--exclude-la \
+		--override s/$(lib)$(major)-dev/$(lib)-dev/ \
+		--movedev "debian/tmp/usr/include/*" usr/include/ \
+		debian/tmp/usr/lib/$(DEB_HOST_MULTIARCH)/$(lib).so
+	touch $@
+clean::
+	rm -f debian/stamp-local-shlibs-$(lib)
+
+# use separately packaged jquery
+CDBS_BUILD_DEPENDS +=, libjs-jquery
+CDBS_DEPENDS_$(pkg-doc) += , libjs-jquery
+DEB_DH_LINK_$(pkg-doc) = /usr/share/javascript/jquery/jquery.js \
+	/usr/share/doc/$(pkg-doc)/html/jquery.js

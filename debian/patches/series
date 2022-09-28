@@ -1,0 +1,4 @@
+1001_fix_manpages.patch
+1002_reproducible_builds.patch
+2001_fix_static_libname.patch
+2002_fix_docs_directory.patch
